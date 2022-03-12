@@ -1,20 +1,19 @@
-var Builder = require('./builder');
-var TestSuite = require('./test_suite');
-var TestCase = require('./test_case');
+import Builder = require('./builder');
+import TestSuite = require('./test_suite');
+import TestCase = require('./test_case');
 
-function Factory() {
+class Factory {
+  public newBuilder() {
+    return new Builder(this);
+  }
+
+  public newTestSuite() {
+    return new TestSuite(this);
+  }
+
+  public newTestCase() {
+    return new TestCase();
+  }
 }
 
-Factory.prototype.newBuilder = function () {
-  return new Builder(this);
-};
-
-Factory.prototype.newTestSuite = function () {
-  return new TestSuite(this);
-};
-
-Factory.prototype.newTestCase = function () {
-  return new TestCase(this);
-};
-
-module.exports = Factory;
+export = Factory;

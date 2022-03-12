@@ -1,128 +1,148 @@
-function TestCase() {
-  this._error = false;
-  this._failure = false;
-  this._skipped = false;
-  this._standardOutput = undefined;
-  this._standardError = undefined;
-  this._stacktrace = undefined;
-  this._attributes = {};
-  this._errorAttributes = {};
-  this._failureAttributes = {};
-  this._errorAttachment = undefined;
-  this._errorContent = undefined;
+import { XMLElement } from 'xmlbuilder';
+
+interface TestCaseAttributes {
+  classname?: string;
+  name?: string;
+  time?: number;
+  file?: string;
 }
 
-TestCase.prototype.className = function (className) {
-  this._attributes.classname = className;
-  return this;
-};
+interface ErrorAttributes {
+  message?: string;
+  type?: string;
+  content?: string;
+}
 
-TestCase.prototype.name = function (name) {
-  this._attributes.name = name;
-  return this;
-};
+class TestCase {
+  private _error = false;
+  private _failure = false;
+  private _skipped = false;
+  private _standardOutput?: string;
+  private _standardError?: string;
+  private _stacktrace?: string;
+  private _attributes: TestCaseAttributes;
+  private _errorAttributes: ErrorAttributes;
+  private _failureAttributes: ErrorAttributes;
+  private _errorAttachment?: string;
+  private _errorContent?: string;
 
-TestCase.prototype.time = function (timeInSeconds) {
-  this._attributes.time = timeInSeconds;
-  return this;
-};
-
-TestCase.prototype.file = function (filepath) {
-  this._attributes.file = filepath;
-  return this;
-};
-
-TestCase.prototype.failure = function (message, type) {
-  this._failure = true;
-  if (message) {
-    this._failureAttributes.message = message;
+  constructor() {
+    this._attributes = {};
+    this._errorAttributes = {};
+    this._failureAttributes = {};
   }
-  if (type) {
-    this._failureAttributes.type = type;
+
+  className(className: string): TestCase {
+    this._attributes.classname = className;
+    return this;
   }
-  return this;
-};
 
-TestCase.prototype.error = function (message, type, content) {
-  this._error = true;
-  if (message) {
-    this._errorAttributes.message = message;
+  name(name: string): TestCase {
+    this._attributes.name = name;
+    return this;
   }
-  if (type) {
-    this._errorAttributes.type = type;
+
+  time(timeInSeconds: number): TestCase {
+    this._attributes.time = timeInSeconds;
+    return this;
   }
-  if (content) {
-    this._errorContent = content;
+
+  file(filepath: string): TestCase {
+    this._attributes.file = filepath;
+    return this;
   }
-  return this;
-};
 
-TestCase.prototype.stacktrace = function (stacktrace) {
-  this._failure = true;
-  this._stacktrace = stacktrace;
-  return this;
-};
+  failure(message: string, type: string): TestCase {
+    this._failure = true;
+    if (message) {
+      this._failureAttributes.message = message;
+    }
+    if (type) {
+      this._failureAttributes.type = type;
+    }
+    return this;
+  }
 
-TestCase.prototype.skipped = function () {
-  this._skipped = true;
-  return this;
-};
+  error(message: string, type: string, content: string): TestCase {
+    this._error = true;
+    if (message) {
+      this._errorAttributes.message = message;
+    }
+    if (type) {
+      this._errorAttributes.type = type;
+    }
+    if (content) {
+      this._errorContent = content;
+    }
+    return this;
+  }
 
-TestCase.prototype.standardOutput = function (log) {
-  this._standardOutput = log;
-  return this;
-};
+  stacktrace(stacktrace: string): TestCase {
+    this._failure = true;
+    this._stacktrace = stacktrace;
+    return this;
+  }
 
-TestCase.prototype.standardError = function (log) {
-  this._standardError = log;
-  return this;
-};
+  skipped(): TestCase {
+    this._skipped = true;
+    return this;
+  }
 
-TestCase.prototype.getFailureCount = function () {
-  return Number(this._failure);
-};
+  standardOutput(log: string): TestCase {
+    this._standardOutput = log;
+    return this;
+  }
 
-TestCase.prototype.getErrorCount = function () {
-  return Number(this._error);
-};
+  standardError(log: string): TestCase {
+    this._standardError = log;
+    return this;
+  }
 
-TestCase.prototype.getSkippedCount = function () {
-  return Number(this._skipped);
-};
+  getFailureCount() {
+    return Number(this._failure);
+  }
 
-TestCase.prototype.errorAttachment = function (path) {
-  this._errorAttachment = path;
-  return this;
-};
+  getErrorCount() {
+    return Number(this._error);
+  }
 
-TestCase.prototype.build = function (parentElement) {
-  var testCaseElement = parentElement.ele('testcase', this._attributes);
-  if (this._failure) {
-    var failureElement = testCaseElement.ele('failure', this._failureAttributes);
-    if (this._stacktrace) {
-      failureElement.cdata(this._stacktrace);
+  getSkippedCount() {
+    return Number(this._skipped);
+  }
+
+  errorAttachment(path: string) {
+    this._errorAttachment = path;
+    return this;
+  }
+
+  build(parentElement: XMLElement) {
+    const testCaseElement = parentElement.ele('testcase', this._attributes);
+    if (this._failure) {
+      const failureElement = testCaseElement.ele('failure', this._failureAttributes);
+      if (this._stacktrace) {
+        failureElement.cdata(this._stacktrace);
+      }
+    }
+    if (this._error) {
+      const errorElement = testCaseElement.ele('error', this._errorAttributes);
+      if (this._errorContent) {
+        errorElement.cdata(this._errorContent);
+      }
+    }
+    if (this._skipped) {
+      testCaseElement.ele('skipped');
+    }
+    if (this._standardOutput) {
+      testCaseElement.ele('system-out').cdata(this._standardOutput);
+    }
+    if (this._standardError) {
+      const systemError = testCaseElement.ele('system-err').cdata(this._standardError);
+
+      if (this._errorAttachment) {
+        systemError.txt('[[ATTACHMENT|' + this._errorAttachment + ']]');
+      }
     }
   }
-  if (this._error) {
-    var errorElement = testCaseElement.ele('error', this._errorAttributes);
-    if (this._errorContent) {
-      errorElement.cdata(this._errorContent);
-    }
-  }
-  if (this._skipped) {
-    testCaseElement.ele('skipped');
-  }
-  if (this._standardOutput) {
-    testCaseElement.ele('system-out').cdata(this._standardOutput);
-  }
-  var systemError;
-  if (this._standardError) {
-    systemError = testCaseElement.ele('system-err').cdata(this._standardError);
+}
 
-    if(this._errorAttachment) {
-      systemError.txt('[[ATTACHMENT|' + this._errorAttachment + ']]');
-    }
-  }
-};
-
-module.exports = TestCase;
+export = TestCase;

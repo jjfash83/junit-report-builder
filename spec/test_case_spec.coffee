@@ -1,4 +1,4 @@
-TestCase = require '../src/test_case'
+TestCase = require '../lib/test_case'
 
 
 describe 'Test Case builder', ->

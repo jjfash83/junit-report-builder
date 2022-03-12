@@ -1,4 +1,4 @@
-TestSuite = require '../src/test_suite'
+TestSuite = require '../lib/test_suite'
 
 
 describe 'Test Suite builder', ->

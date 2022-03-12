@@ -1,86 +1,113 @@
-var _ = require('lodash');
-var formatDate = require('date-format').asString;
+import _ = require('lodash');
+const formatDate = require('date-format').asString;
+import TestCase = require('./test_case');
+import Factory = require('./factory');
+import { XMLElement } from 'xmlbuilder';
 
-function TestSuite(factory) {
-  this._factory = factory;
-  this._attributes = {};
-  this._testCases = [];
-  this._properties = [];
+interface Property {
+  name: string;
+  value: string;
 }
 
-TestSuite.prototype.name = function (name) {
-  this._attributes.name = name;
-  return this;
-};
+interface TestSuiteAttributes {
+  tests?: number;
+  errors?: number;
+  failures?: number;
+  skipped?: number;
+  classname?: string;
+  name?: string;
+  time?: number;
+  file?: string;
+  timestamp?: string;
+}
 
-TestSuite.prototype.time = function (timeInSeconds) {
-  this._attributes.time = timeInSeconds;
-  return this;
-};
+class TestSuite {
+  private _factory: Factory;
+  private _attributes: TestSuiteAttributes;
+  private _testCases: TestCase[];
+  private _properties: Property[];
 
-TestSuite.prototype.timestamp = function (timestamp) {
-  if (_.isDate(timestamp)) {
-    this._attributes.timestamp = formatDate('yyyy-MM-ddThh:mm:ss', timestamp);
-  } else {
-    this._attributes.timestamp = timestamp;
+  constructor(factory: Factory) {
+    this._factory = factory;
+    this._attributes = {};
+    this._testCases = [];
+    this._properties = [];
   }
-  return this;
-};
 
-TestSuite.prototype.property = function (name, value) {
-  this._properties.push({'name': name, 'value': value});
-  return this;
-};
+  public name(name: string) {
+    this._attributes.name = name;
+    return this;
+  }
 
-TestSuite.prototype.testCase = function () {
-  var testCase = this._factory.newTestCase();
-  this._testCases.push(testCase);
-  return testCase;
-};
+  public time(timeInSeconds: number) {
+    this._attributes.time = timeInSeconds;
+    return this;
+  }
 
-TestSuite.prototype.getFailureCount = function () {
-  return this._sumTestCaseCounts(function (testCase) {
-    return testCase.getFailureCount();
-  });
-};
+  public timestamp(timestamp: Date | string) {
+    if (_.isDate(timestamp)) {
+      this._attributes.timestamp = formatDate('yyyy-MM-ddThh:mm:ss', timestamp);
+    } else {
+      this._attributes.timestamp = timestamp as string;
+    }
+    return this;
+  }
 
-TestSuite.prototype.getErrorCount = function () {
-  return this._sumTestCaseCounts(function (testCase) {
-    return testCase.getErrorCount();
-  });
-};
+  public property(name: string, value: any) {
+    this._properties.push({ name, value });
+    return this;
+  }
 
-TestSuite.prototype.getSkippedCount = function () {
-  return this._sumTestCaseCounts(function (testCase) {
-    return testCase.getSkippedCount();
-  });
-};
+  public testCase() {
+    const testCase = this._factory.newTestCase();
+    this._testCases.push(testCase);
+    return testCase;
+  }
 
-TestSuite.prototype._sumTestCaseCounts = function (counterFunction) {
-  var counts = _.map(this._testCases, counterFunction);
-  return _.sum(counts);
-};
-
-TestSuite.prototype.build = function (parentElement) {
-  this._attributes.tests = this._testCases.length;
-  this._attributes.failures = this.getFailureCount();
-  this._attributes.errors = this.getErrorCount();
-  this._attributes.skipped = this.getSkippedCount();
-  var suiteElement = parentElement.ele('testsuite', this._attributes);
-
-  if (this._properties.length) {
-    var propertiesElement = suiteElement.ele('properties');
-    _.forEach(this._properties, function (property) {
-      propertiesElement.ele('property', {
-        name: property.name,
-        value: property.value
-      });
+  public getFailureCount() {
+    return this._sumTestCaseCounts((testCase: TestCase) => {
+      return testCase.getFailureCount();
     });
   }
 
-  _.forEach(this._testCases, function (testCase) {
-    testCase.build(suiteElement);
-  });
-};
+  public getErrorCount() {
+    return this._sumTestCaseCounts((testCase: TestCase) => {
+      return testCase.getErrorCount();
+    });
+  }
 
-module.exports = TestSuite;
+  public getSkippedCount() {
+    return this._sumTestCaseCounts((testCase: TestCase) => {
+      return testCase.getSkippedCount();
+    });
+  }
+
+  public _sumTestCaseCounts(counterFunction: (testCase: TestCase) => number): number {
+    const counts = _.map(this._testCases, counterFunction);
+    return _.sum(counts);
+  }
+
+  public build(parentElement: XMLElement) {
+    this._attributes.tests = this._testCases.length;
+    this._attributes.failures = this.getFailureCount();
+    this._attributes.errors = this.getErrorCount();
+    this._attributes.skipped = this.getSkippedCount();
+    const suiteElement = parentElement.ele('testsuite', this._attributes);
+
+    if (this._properties.length) {
+      const propertiesElement = suiteElement.ele('properties');
+      _.forEach(this._properties, (property: Property) => {
+        propertiesElement.ele('property', {
+          name: property.name,
+          value: property.value,
+        });
+      });
+    }
+
+    _.forEach(this._testCases, (testCase: TestCase) => {
+      testCase.build(suiteElement);
+    });
+  }
+}
+
+export = TestSuite;

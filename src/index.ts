@@ -1,3 +1,5 @@
-var Factory = require('./factory');
+import Factory = require('./factory');
 
-module.exports = new Factory().newBuilder();
+const builder = new Factory().newBuilder();
+
+export = builder;
